@@ -1,8 +1,11 @@
 package api
 
 import (
+	"fmt"
+	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/greycodee/wechat-backup/db"
@@ -16,6 +19,7 @@ const (
 	ImgApi      = "/api/media/img"
 	VideoApi    = "/api/media/video"
 	VoiceApi    = "/api/media/voice"
+	DetailKWApi = "/api/chat/detailkw"
 )
 
 type Api struct {
@@ -66,6 +70,7 @@ func (a Api) imgHandler(c *gin.Context) {
 
 func (a Api) videoHandler(c *gin.Context) {
 	msgId := c.Query("msgId")
+	fmt.Println("msgId: ", msgId)
 	c.JSON(200, a.wcdb.GetVideoPath(msgId))
 }
 
@@ -73,6 +78,22 @@ func (a Api) voiceHandler(c *gin.Context) {
 	msgId := c.Query("msgId")
 	c.JSON(200, a.wcdb.GetVoicePath(msgId))
 }
+
+func (a Api) detailKeyWordHandler(c *gin.Context) {
+	createTime, _ := strconv.ParseInt(c.DefaultQuery("createTime", "1"), 10, 64)
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	talker := c.Query("talker")
+	keyWord := c.DefaultQuery("keyWord", "")
+	keyWord = strings.ReplaceAll(keyWord, "'", "''")
+	// keyWord = strings.ReplaceAll(keyWord, ".", "..")
+	log.Printf("keyWord %s", keyWord)
+	c.JSON(200, a.wcdb.ChatDetailListKeyWord(talker, keyWord, createTime, pageSize))
+}
+
+// func (a Api) emojiHandler(c *gin.Context) {
+// 	emojiId := c.Query("emojiId")
+// 	c.
+// }
 
 func (a Api) Router() http.Handler {
 	a.Engine.GET(ListApi, a.listHandler)
@@ -82,6 +103,6 @@ func (a Api) Router() http.Handler {
 	a.Engine.GET(ImgApi, a.imgHandler)
 	a.Engine.GET(VideoApi, a.videoHandler)
 	a.Engine.GET(VoiceApi, a.voiceHandler)
-
+	a.Engine.GET(DetailKWApi, a.detailKeyWordHandler)
 	return a.Engine
 }

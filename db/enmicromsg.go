@@ -3,6 +3,7 @@ package db
 import (
 	"crypto/md5"
 	"database/sql"
+	"encoding/xml"
 	"fmt"
 	"log"
 	"strings"
@@ -116,6 +117,87 @@ func (em EnMicroMsg) ChatDetailList(talker string, pageIndex int, pageSize int) 
 	return result
 }
 
+type Msg struct {
+	XMLName xml.Name `xml:"msg"`
+	Title   string   `xml:"appmsg>title"`
+	Type    string   `xml:"appmsg>type"`
+}
+
+func getAppendMessageTitle(xmlData string) string {
+	decoder := xml.NewDecoder(strings.NewReader(xmlData))
+	var msg Msg
+	err := decoder.Decode(&msg)
+	if err != nil {
+		fmt.Println("解析XML时出现错误:", err)
+		return ""
+	}
+
+	return msg.Title
+}
+
+func (em EnMicroMsg) ChatDetailListKeyword(talker string, keyWord string, createTime int64, pageSize int) *ChatDetailList {
+	result := &ChatDetailList{}
+	result.Total = 10
+	result.Rows = make([]ChatDetailListRow, 0)
+
+	for {
+
+		queryRowsSql := fmt.Sprintf("SELECT ifnull(msgId,'') as msgId,ifnull(msgSvrId,'') as msgSvrId,type,isSend,createTime,talker,ifnull(content,'') as content,ifnull(imgPath,'') as imgPath FROM message WHERE talker='%s' AND content LIKE '%%%s%%' AND (type=1 OR type=822083633) AND createTime<%d order  by createtime desc limit %d", talker, keyWord, createTime, pageSize)
+		log.Println(queryRowsSql)
+		rows, err := em.db.Query(queryRowsSql)
+		if err != nil {
+			fmt.Println(err)
+		}
+		lastCreateTime := int64(0)
+		hasResult := false
+		defer rows.Close()
+		for rows.Next() {
+			var r ChatDetailListRow
+			err = rows.Scan(&r.MsgId, &r.MsgSvrId, &r.Type, &r.IsSend, &r.CreateTime, &r.Talker, &r.Content, &r.ImgPath)
+			if err != nil {
+				log.Printf("未查询到聊天历史记录,%s", err)
+			}
+			hasResult = true
+			lastCreateTime = r.CreateTime
+			// 表情图片
+			if r.Type == 47 {
+				r.EmojiInfo = em.GetEmojiInfo(r.ImgPath)
+			}
+
+			// 引用
+			if r.Type == 822083633 {
+				titel := getAppendMessageTitle(r.Content)
+				if strings.Index(titel, keyWord) == -1 {
+					continue
+				}
+
+				if r.IsSend == 1 {
+					r.Content = titel
+				} else {
+					// 保持与数据库一样的格式
+					r.Content = strings.Split(r.Content, ":")[0] + ":\n" + titel
+				}
+			}
+			// em.getMediaPath(&r, wxfileindex)
+			result.Rows = append(result.Rows, r)
+
+			if len(result.Rows) == pageSize {
+				break
+			}
+		}
+
+		if hasResult && (len(result.Rows) < pageSize) {
+			createTime = lastCreateTime
+			log.Printf("len(result.Rows) %d < %d, createTime %d", len(result.Rows), pageSize, createTime)
+			continue
+		}
+
+		result.Total = len(result.Rows)
+		break
+	}
+	return result
+}
+
 func (em EnMicroMsg) GetUserInfo(username string) UserInfo {
 	r := UserInfo{}
 	querySql := fmt.Sprintf("select rc.username,rc.alias,rc.conRemark,rc.nickname,ifnull(imf.reserved1,'') as reserved1,ifnull(imf.reserved2,'') as reserved2 from rcontact rc LEFT JOIN img_flag imf on rc.username=imf.username where rc.username='%s';", username)
@@ -172,7 +254,6 @@ func (em EnMicroMsg) formatVideoPath(path string) string {
 	return fmt.Sprintf("%svideo/%s.mp4", MediaPathPrefix, path)
 }
 
-//
 func (em EnMicroMsg) GetEmojiInfo(imgPath string) EmojiInfo {
 	emojiInfo := EmojiInfo{}
 	querySql := fmt.Sprintf("select md5, cdnUrl,width,height from EmojiInfo where md5='%s'", imgPath)
