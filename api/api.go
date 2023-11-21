@@ -20,6 +20,8 @@ const (
 	VideoApi    = "/api/media/video"
 	VoiceApi    = "/api/media/voice"
 	DetailKWApi = "/api/chat/detailkw"
+	MsgDateApi  = "/api/chat/msgdate"
+	MedListApi  = "/apt/media/list"
 )
 
 type Api struct {
@@ -90,10 +92,19 @@ func (a Api) detailKeyWordHandler(c *gin.Context) {
 	c.JSON(200, a.wcdb.ChatDetailListKeyWord(talker, keyWord, createTime, pageSize))
 }
 
-// func (a Api) emojiHandler(c *gin.Context) {
-// 	emojiId := c.Query("emojiId")
-// 	c.
-// }
+func (a Api) MessageDateHandler(c *gin.Context) {
+	talker := c.Query("talker")
+	c.JSON(200, a.wcdb.ChatMessageDate(talker))
+}
+
+func (a Api) MediaListHandler(c *gin.Context) {
+	log.Println("MediaListHandler start")
+	defer log.Println("MediaListHandler end")
+	talker := c.Query("talker")
+	pageIndex, _ := strconv.Atoi(c.DefaultQuery("pageIndex", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "28"))
+	c.JSON(200, a.wcdb.ChatDetailMediaList(talker, pageIndex-1, pageSize))
+}
 
 func (a Api) Router() http.Handler {
 	a.Engine.GET(ListApi, a.listHandler)
@@ -104,5 +115,7 @@ func (a Api) Router() http.Handler {
 	a.Engine.GET(VideoApi, a.videoHandler)
 	a.Engine.GET(VoiceApi, a.voiceHandler)
 	a.Engine.GET(DetailKWApi, a.detailKeyWordHandler)
+	a.Engine.GET(MsgDateApi, a.MessageDateHandler)
+	a.Engine.GET(MedListApi, a.MediaListHandler)
 	return a.Engine
 }

@@ -64,3 +64,8 @@ type EmojiInfo struct {
 	W      int64  `json:"w"`
 	H      int64  `json:"h"`
 }
+
+type MessageDate struct {
+	Date  []string `json:"date"`
+	Total int      `json:"Total"`
+}

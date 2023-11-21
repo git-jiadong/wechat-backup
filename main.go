@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
+	"log"
 	"net/http"
 	"time"
 
@@ -22,6 +23,7 @@ var staticFile embed.FS
 var indexHtml []byte
 
 func init() {
+	log.SetFlags(log.Ldate | log.Lmicroseconds | log.Lshortfile)
 	flag.Parse()
 	if basePath == nil || *basePath == "" {
 		panic("please specify basePath")

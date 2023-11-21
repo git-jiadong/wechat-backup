@@ -79,6 +79,39 @@ func (wcdb WCDB) ChatDetailListKeyWord(talker string, keyWord string, createTime
 	return result
 }
 
+func (wcdb WCDB) ChatDetailMediaList(talker string, pageIndex int, pageSize int) *ChatDetailList {
+	result := wcdb.enmicromsg.ChatDetailMediaList(talker, pageIndex, pageSize)
+	detailList := make([]ChatDetailListRow, 0)
+	isChatRoomFlag := false
+	if len(strings.Split(talker, "@")) == 2 {
+		isChatRoomFlag = strings.Split(talker, "@")[1] == "chatroom"
+	}
+	for _, v := range result.Rows {
+		chatDetailListRow := wcdb.getMediaPath(v)
+		chatDetailListRow.IsChatRoom = isChatRoomFlag
+		username := v.Talker
+		if v.Type != 268445456 && v.Type != 10000 {
+			if isChatRoomFlag && v.IsSend == 0 {
+				username = strings.Split(v.Content, ":")[0]
+				chatDetailListRow.Content = v.Content[len(username)+2:]
+			}
+
+			if v.IsSend == 0 {
+				chatDetailListRow.UserInfo = wcdb.enmicromsg.GetUserInfo(username)
+			} else {
+				chatDetailListRow.UserInfo = wcdb.enmicromsg.GetMyInfo()
+			}
+		}
+		detailList = append(detailList, chatDetailListRow)
+	}
+	result.Rows = detailList
+	return result
+}
+
+func (wcdb WCDB) ChatMessageDate(talker string) *MessageDate {
+	return wcdb.enmicromsg.ChatMessageDate(talker)
+}
+
 func (wcdb WCDB) GetUserInfo(username string) UserInfo {
 	return wcdb.enmicromsg.GetUserInfo(username)
 }
@@ -116,6 +149,7 @@ func (wcdb WCDB) getMediaPath(chat ChatDetailListRow) ChatDetailListRow {
 	case 43:
 		// 视频
 		chat.MediaPath = wcdb.enmicromsg.formatVideoPath(chat.ImgPath)
+		chat.ImgPath = wcdb.enmicromsg.formatVideoPreviewPath(chat.ImgPath)
 	case 1090519089:
 		fileInfo := FileInfo{}
 		filepath, fileSize := wcdb.wxfileindex.GetFilePath(chat.MsgId)

@@ -114,6 +114,7 @@ func (em EnMicroMsg) ChatDetailList(talker string, pageIndex int, pageSize int) 
 		// em.getMediaPath(&r, wxfileindex)
 		result.Rows = append(result.Rows, r)
 	}
+	result.Total = len(result.Rows)
 	return result
 }
 
@@ -198,6 +199,62 @@ func (em EnMicroMsg) ChatDetailListKeyword(talker string, keyWord string, create
 	return result
 }
 
+func (em EnMicroMsg) ChatMessageDate(talker string) *MessageDate {
+	result := &MessageDate{}
+	result.Total = 0
+	result.Date = make([]string, 0)
+
+	queryRowsSql := fmt.Sprintf("SELECT DISTINCT strftime('%%Y-%%m-%%d', datetime((createTime+28800000)/1000, 'unixepoch')) FROM message WHERE talker='%s' order by createtime desc", talker)
+	rows, err := em.db.Query(queryRowsSql)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var date string
+		err = rows.Scan(&date)
+		if err != nil {
+			log.Printf("未查询到聊天历史记录,%s", err)
+		}
+
+		result.Date = append(result.Date, date)
+	}
+	result.Total = len(result.Date)
+
+	return result
+}
+
+func (em EnMicroMsg) ChatDetailMediaList(talker string, pageIndex int, pageSize int) *ChatDetailList {
+	result := &ChatDetailList{}
+	result.Total = 10
+	result.Rows = make([]ChatDetailListRow, 0)
+
+	queryRowsSql := fmt.Sprintf("SELECT ifnull(msgId,'') as msgId,ifnull(msgSvrId,'') as msgSvrId,type,isSend,createTime,talker,ifnull(content,'') as content,ifnull(imgPath,'') as imgPath FROM message WHERE talker='%s' AND (type='3' or type='43') order by createtime desc limit %d,%d", talker, pageIndex*pageSize, pageSize)
+	log.Println("sqlite start", queryRowsSql)
+	rows, err := em.db.Query(queryRowsSql)
+	log.Println("sqlite end")
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var r ChatDetailListRow
+		err = rows.Scan(&r.MsgId, &r.MsgSvrId, &r.Type, &r.IsSend, &r.CreateTime, &r.Talker, &r.Content, &r.ImgPath)
+		if err != nil {
+			log.Printf("未查询到聊天历史记录,%s", err)
+		}
+		// 表情图片
+		if r.Type == 47 {
+			r.EmojiInfo = em.GetEmojiInfo(r.ImgPath)
+		}
+		// em.getMediaPath(&r, wxfileindex)
+		result.Rows = append(result.Rows, r)
+	}
+	result.Total = len(result.Rows)
+
+	return result
+}
+
 func (em EnMicroMsg) GetUserInfo(username string) UserInfo {
 	r := UserInfo{}
 	querySql := fmt.Sprintf("select rc.username,rc.alias,rc.conRemark,rc.nickname,ifnull(imf.reserved1,'') as reserved1,ifnull(imf.reserved2,'') as reserved2 from rcontact rc LEFT JOIN img_flag imf on rc.username=imf.username where rc.username='%s';", username)
@@ -252,6 +309,10 @@ func (em EnMicroMsg) formatVoicePath(path string) string {
 }
 func (em EnMicroMsg) formatVideoPath(path string) string {
 	return fmt.Sprintf("%svideo/%s.mp4", MediaPathPrefix, path)
+}
+
+func (em EnMicroMsg) formatVideoPreviewPath(path string) string {
+	return fmt.Sprintf("%svideo/%s.jpg", MediaPathPrefix, path)
 }
 
 func (em EnMicroMsg) GetEmojiInfo(imgPath string) EmojiInfo {
