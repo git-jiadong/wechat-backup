@@ -255,6 +255,47 @@ func (em EnMicroMsg) ChatDetailMediaList(talker string, pageIndex int, pageSize 
 	return result
 }
 
+func (em EnMicroMsg) ChatDetailListAt(talker string, pageIndex int, pageSize int, createTime int64, direction string) *ChatDetailList {
+	result := &ChatDetailList{}
+	result.Total = 0
+	result.Rows = make([]ChatDetailListRow, 0)
+	symbol := ""
+	isASC := "ASC"
+	if direction == "prev" {
+		symbol = "<="
+		isASC = "desc"
+	} else if direction == "next" {
+		symbol = ">"
+	} else {
+		log.Println("error params ", direction)
+		return result
+	}
+	queryRowsSql := fmt.Sprintf("SELECT ifnull(msgId,'') as msgId,ifnull(msgSvrId,'') as msgSvrId,type,isSend,createTime,talker,ifnull(content,'') as content,ifnull(imgPath,'') as imgPath FROM message WHERE talker='%s' AND createtime%s%d order by createtime %s limit %d,%d", talker, symbol, createTime, isASC, pageIndex*pageSize, pageSize)
+	log.Println("sqlite start", queryRowsSql)
+	rows, err := em.db.Query(queryRowsSql)
+	log.Println("sqlite end")
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var r ChatDetailListRow
+		err = rows.Scan(&r.MsgId, &r.MsgSvrId, &r.Type, &r.IsSend, &r.CreateTime, &r.Talker, &r.Content, &r.ImgPath)
+		if err != nil {
+			log.Printf("未查询到聊天历史记录,%s", err)
+		}
+		// 表情图片
+		if r.Type == 47 {
+			r.EmojiInfo = em.GetEmojiInfo(r.ImgPath)
+		}
+		// em.getMediaPath(&r, wxfileindex)
+		result.Rows = append(result.Rows, r)
+	}
+	result.Total = len(result.Rows)
+
+	return result
+}
+
 func (em EnMicroMsg) GetUserInfo(username string) UserInfo {
 	r := UserInfo{}
 	querySql := fmt.Sprintf("select rc.username,rc.alias,rc.conRemark,rc.nickname,ifnull(imf.reserved1,'') as reserved1,ifnull(imf.reserved2,'') as reserved2 from rcontact rc LEFT JOIN img_flag imf on rc.username=imf.username where rc.username='%s';", username)

@@ -22,6 +22,7 @@ const (
 	DetailKWApi = "/api/chat/detailkw"
 	MsgDateApi  = "/api/chat/msgdate"
 	MedListApi  = "/apt/media/list"
+	DetailAtApi = "/api/chat/detailat"
 )
 
 type Api struct {
@@ -98,12 +99,20 @@ func (a Api) MessageDateHandler(c *gin.Context) {
 }
 
 func (a Api) MediaListHandler(c *gin.Context) {
-	log.Println("MediaListHandler start")
-	defer log.Println("MediaListHandler end")
 	talker := c.Query("talker")
 	pageIndex, _ := strconv.Atoi(c.DefaultQuery("pageIndex", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "28"))
 	c.JSON(200, a.wcdb.ChatDetailMediaList(talker, pageIndex-1, pageSize))
+}
+
+func (a Api) detailAtHandler(c *gin.Context) {
+	talker := c.Query("talker")
+	pageIndex, _ := strconv.Atoi(c.DefaultQuery("pageIndex", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	createTime, _ := strconv.ParseInt(c.DefaultQuery("createTime", "1"), 10, 64)
+	direction := c.Query("direction")
+	log.Printf("direction %s", direction)
+	c.JSON(200, a.wcdb.ChatDetailListAt(talker, pageIndex-1, pageSize, createTime, direction))
 }
 
 func (a Api) Router() http.Handler {
@@ -117,5 +126,6 @@ func (a Api) Router() http.Handler {
 	a.Engine.GET(DetailKWApi, a.detailKeyWordHandler)
 	a.Engine.GET(MsgDateApi, a.MessageDateHandler)
 	a.Engine.GET(MedListApi, a.MediaListHandler)
+	a.Engine.GET(DetailAtApi, a.detailAtHandler)
 	return a.Engine
 }
