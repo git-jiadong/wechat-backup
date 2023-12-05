@@ -36,6 +36,10 @@ func (wf *WxFileIndex) Close() {
 }
 
 func (wf WxFileIndex) GetImgPath(msgId string) string {
+	if wf.tableName == "" {
+		return ""
+	}
+
 	var path string
 	querySql := fmt.Sprintf("select path from %s WHERE msgId=%s and msgSubType=20", wf.tableName, msgId)
 	err := wf.db.QueryRow(querySql).Scan(&path)

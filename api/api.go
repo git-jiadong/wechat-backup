@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -89,7 +88,7 @@ func (a Api) detailKeyWordHandler(c *gin.Context) {
 	keyWord := c.DefaultQuery("keyWord", "")
 	keyWord = strings.ReplaceAll(keyWord, "'", "''")
 	// keyWord = strings.ReplaceAll(keyWord, ".", "..")
-	log.Printf("keyWord %s", keyWord)
+	// log.Printf("keyWord %s", keyWord)
 	c.JSON(200, a.wcdb.ChatDetailListKeyWord(talker, keyWord, createTime, pageSize))
 }
 
@@ -111,7 +110,7 @@ func (a Api) detailAtHandler(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 	createTime, _ := strconv.ParseInt(c.DefaultQuery("createTime", "1"), 10, 64)
 	direction := c.Query("direction")
-	log.Printf("direction %s", direction)
+	// log.Printf("direction %s", direction)
 	c.JSON(200, a.wcdb.ChatDetailListAt(talker, pageIndex-1, pageSize, createTime, direction))
 }
 

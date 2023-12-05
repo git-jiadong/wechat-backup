@@ -6,6 +6,8 @@ import (
 	"encoding/xml"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -14,8 +16,9 @@ import (
 var MediaPathPrefix = "/media/"
 
 type EnMicroMsg struct {
-	db     *sql.DB
-	myInfo UserInfo
+	db      *sql.DB
+	myInfo  UserInfo
+	dirPath string
 }
 
 func OpenEnMicroMsg(dbPath string) *EnMicroMsg {
@@ -26,6 +29,8 @@ func OpenEnMicroMsg(dbPath string) *EnMicroMsg {
 	}
 	em.db = db
 	em.myInfo = em.GetMyInfo()
+	em.dirPath = filepath.Dir(dbPath)
+	log.Println("em.dirPath", em.dirPath)
 	return em
 }
 
@@ -144,7 +149,7 @@ func (em EnMicroMsg) ChatDetailListKeyword(talker string, keyWord string, create
 	for {
 
 		queryRowsSql := fmt.Sprintf("SELECT ifnull(msgId,'') as msgId,ifnull(msgSvrId,'') as msgSvrId,type,isSend,createTime,talker,ifnull(content,'') as content,ifnull(imgPath,'') as imgPath FROM message WHERE talker='%s' AND content LIKE '%%%s%%' AND (type=1 OR type=822083633) AND createTime<%d order  by createtime desc limit %d", talker, keyWord, createTime, pageSize)
-		log.Println(queryRowsSql)
+		// log.Println(queryRowsSql)
 		rows, err := em.db.Query(queryRowsSql)
 		if err != nil {
 			fmt.Println(err)
@@ -230,9 +235,9 @@ func (em EnMicroMsg) ChatDetailMediaList(talker string, pageIndex int, pageSize 
 	result.Rows = make([]ChatDetailListRow, 0)
 
 	queryRowsSql := fmt.Sprintf("SELECT ifnull(msgId,'') as msgId,ifnull(msgSvrId,'') as msgSvrId,type,isSend,createTime,talker,ifnull(content,'') as content,ifnull(imgPath,'') as imgPath FROM message WHERE talker='%s' AND (type='3' or type='43') order by createtime desc limit %d,%d", talker, pageIndex*pageSize, pageSize)
-	log.Println("sqlite start", queryRowsSql)
+	// log.Println("sqlite start", queryRowsSql)
 	rows, err := em.db.Query(queryRowsSql)
-	log.Println("sqlite end")
+	// log.Println("sqlite end")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -271,9 +276,9 @@ func (em EnMicroMsg) ChatDetailListAt(talker string, pageIndex int, pageSize int
 		return result
 	}
 	queryRowsSql := fmt.Sprintf("SELECT ifnull(msgId,'') as msgId,ifnull(msgSvrId,'') as msgSvrId,type,isSend,createTime,talker,ifnull(content,'') as content,ifnull(imgPath,'') as imgPath FROM message WHERE talker='%s' AND createtime%s%d order by createtime %s limit %d,%d", talker, symbol, createTime, isASC, pageIndex*pageSize, pageSize)
-	log.Println("sqlite start", queryRowsSql)
+	// log.Println("sqlite start", queryRowsSql)
 	rows, err := em.db.Query(queryRowsSql)
-	log.Println("sqlite end")
+	// log.Println("sqlite end")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -342,6 +347,22 @@ func (em EnMicroMsg) formatImageBCKPath(chat ChatDetailListRow) string {
 	}
 	return fmt.Sprintf("%simage2/%s/%s/%s", MediaPathPrefix, imgFileName[0:2], imgFileName[2:4], imgFileName)
 }
+
+func (em EnMicroMsg) formatImageSourcePath(chat ChatDetailListRow) string {
+	imgFileName := strings.Split(chat.ImgPath, "://")[1]
+	imgFileName = strings.Replace(imgFileName, "th_", "", 1)
+	localImageBCKPath := fmt.Sprintf("%s/image2/%s/%s/%s.jpg", em.dirPath, imgFileName[0:2], imgFileName[2:4], imgFileName)
+	log.Println("localImageBCKPath", localImageBCKPath)
+	_, err := os.Stat(localImageBCKPath)
+	if err == nil {
+		imageSourcePath := fmt.Sprintf("%simage2/%s/%s/%s.jpg", MediaPathPrefix, imgFileName[0:2], imgFileName[2:4], imgFileName)
+		log.Println("imageSourcePath", imageSourcePath)
+		return imageSourcePath
+	}
+
+	return ""
+}
+
 func (em EnMicroMsg) formatVoicePath(path string) string {
 	p := md5.Sum([]byte(path))
 	md5Str := fmt.Sprintf("%x", p)

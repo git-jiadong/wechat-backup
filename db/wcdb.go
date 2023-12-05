@@ -172,6 +172,9 @@ func (wcdb WCDB) getMediaPath(chat ChatDetailListRow) ChatDetailListRow {
 		chat.MediaPath = wcdb.enmicromsg.formatImagePath(chat.ImgPath)
 		chat.MediaBCKPath = wcdb.enmicromsg.formatImageBCKPath(chat)
 		chat.MediaSourcePath = wcdb.wxfileindex.GetImgPath(chat.MsgId)
+		if chat.MediaSourcePath == "" {
+			chat.MediaSourcePath = wcdb.enmicromsg.formatImageSourcePath(chat)
+		}
 	case 34:
 		// 语音
 		chat.MediaPath = wcdb.enmicromsg.formatVoicePath(chat.ImgPath)
