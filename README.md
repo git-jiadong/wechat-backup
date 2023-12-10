@@ -1,14 +1,14 @@
 
 ## 说明
 本项目用于导出备份微信的聊天记录，不依赖微信的客户端使用，做到离线且永久保存。
-解决大部分人因为微信的聊天记录内存飞快增长而已束手无策的烦恼。<img src="./resource/old_man_phone.png" width="30" height="30" alt="无法加载">
+解决大部分人因为微信的聊天记录内存飞快增长而已束手无策的烦恼。<img src="resource/old_man_phone.png" width="30" height="30" alt="无法加载">
 
 项目基于 [wechat-backup](https://github.com/greycodee/wechat-backup) 修改。
 主要优化了前端的浏览功能，如按照关键字查找聊天记录、按照日期查看、查看图片与视频等功能。
 本项目期望后续做到小白可以直接使用，欢迎大家积极提问和使用！
 
 ## 效果图
-![](./resource/wechat.gif)
+![](resource/wechat.gif)
 
 ## 使用流程
 > 详细说明在: [解密安卓微信聊天信息存储](https://blog.greycode.top/posts/android-wechat-bak/)
