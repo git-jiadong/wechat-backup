@@ -104,7 +104,7 @@ function decodeSilk2MP3() {
     PRE_PATH=$(pwd)
     cd ..
     if [ ! -f "silk-v3-decoder/converter.sh" ]; then
-        git submodule init 
+        git submodule update --init
     fi
     cd  silk-v3-decoder
 
